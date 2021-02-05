@@ -7,10 +7,14 @@ You can have your config file and command prefixes changed in the plugin file if
 
 ## Command help
 `!!wes` or `!!weschem` are the command prefixes, they can also be used to call the help message out.
+
 In the rest of this guide, `<Prefix>` refer to the two command prefixes.
+
 1.`<Prefix> list` 
 List all the sub-servers that this plugin can access.
+
 2.`<Prefix> list <sub-server>`
 List all the schematics in the sub-server you input.
+
 3.`<Prefix> fetch <sub-server> <schematic>`
 Copy the schematic you want in one another sub-server to the sub-server you are currently in.
