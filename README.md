@@ -1,6 +1,6 @@
 # WorldEdit Schematic Fetcher
 
-**Project Creative Enchancer Workshop **#2
+**Project Creative Enchancer Workshop** #2
 
   **English** | [简体中文(Simplified Chinese)](https://github.com/ra1ny-yuki/weschem/blob/main/README_zh.md)
 
