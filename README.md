@@ -1,5 +1,7 @@
 # WorldEdit Schematic Fetcher
 
+**Project Creative Enchancer #2**
+
   **English** | [简体中文(Simplified Chinese)](https://github.com/ra1ny-yuki/weschem/blob/main/README_zh.md)
 
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
