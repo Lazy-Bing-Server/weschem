@@ -7,7 +7,7 @@
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
 
 ## Requirement
-- [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) 1.x
+- [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
 
 ## Configuration Tips
