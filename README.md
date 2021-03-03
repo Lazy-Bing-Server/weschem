@@ -1,4 +1,4 @@
-# WorldEdit Schematic Fetcher
+# WorldEdit Schematic Manager
 
 **Project Creative Enchancer Workshop** #2
 
@@ -8,6 +8,7 @@
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) 1.x
+- [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
 
 ## Configuration Tips
 - Don't forget to confirgurate the config file `config/WESchem.json` in your MCDR working directory after generating config file when plugin is loaded for the first time.
@@ -27,3 +28,9 @@ List all the schematics in the sub-server you input.
 
 3. `<Prefix> fetch <sub-server> <schematic>`
 Copy the schematic you want in one another sub-server to the sub-server you are currently in.
+
+4. `<Prefix> send <sub-server> <schematic>
+Copy the schematic you want in the sub-server you're currently in to one another sub-server.
+
+5. `<Prefix> reload
+Reload the configuration file `config/WESchem.json`.
