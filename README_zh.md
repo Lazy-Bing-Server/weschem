@@ -29,7 +29,7 @@
 3. `<Prefix> fetch <sub-server> <schematic>`
 将另一子服中的原理图复制到当前子服中。
 
-4. `<Prefix> send <sub-server> <schematic>
+4. `<Prefix> send <sub-server> <schematic>`
 将当前子服中的原理图复制到另一子服中。
 
 5. `<Prefix> reload
