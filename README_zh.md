@@ -5,6 +5,10 @@
  [英语(English)](https://github.com/ra1ny-yuki/weschem) | **简体中文**
 
  一个用于获取同一机器上其他子服务器创世神原理图的MCDR插件。
+ 
+## 依赖
+- [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
+- [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
 
 ## 配置小贴士
 - 初次加载插件生成配置后别忘了改，配置文件在MCDR工作目录下的`config/WESchem.json`
@@ -24,3 +28,9 @@
 
 3. `<Prefix> fetch <sub-server> <schematic>`
 将另一子服中的原理图复制到当前子服中。
+
+4. `<Prefix> send <sub-server> <schematic>
+将当前子服中的原理图复制到另一子服中。
+
+5. `<Prefix> reload
+重载本插件配置文件`config/WESchem.json`。
