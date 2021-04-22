@@ -9,6 +9,7 @@
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
+- [Gitpython](https://pypi.org/project/GitPython/) (You can simply install it with `pip install gitpython` in your system shell. )
 
 ## Configuration Tips
 - Don't forget to confirgurate the config file `config/WESchem.json` in your MCDR working directory after generating config file when plugin is loaded for the first time.
@@ -27,10 +28,25 @@ List all the sub-servers that this plugin can access.
 List all the schematics in the sub-server you input.
 
 3. `<Prefix> fetch <sub-server> <schematic>`
-Copy the schematic you want in one another sub-server to the sub-server you are currently in.
+  Copy the schematic you want in one another sub-server to the sub-server you are currently in.
+
+  Or you can fetch schematic from local share reposity, which is named as `git` in game.
 
 4. `<Prefix> send <sub-server> <schematic>`
-Copy the schematic you want in the sub-server you're currently in to one another sub-server.
+  Copy the schematic you want in the sub-server you're currently in to one another sub-server.
+
+  Or you can send schematic to local share reposity.
 
 5. `<Prefix> reload`
-Reload the configuration file `config/WESchem.json`.
+  Reload the configuration file `config/WESchem.json`.
+
+6. `<Prefix> push`
+  Push your changes from local share reposity to the remote reposity.
+
+7. `<Prefix> pull`
+   Pull your changes from the remote reposity to the local share reposity.
+
+8. `<prefix> clear`
+
+   Clear your local share reposity. Folders and markdown files will be kept.
+

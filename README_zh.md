@@ -1,14 +1,15 @@
-# 创世神原理图获取
+# 创世神原理图管理器
 
 **创造模式增强插件工坊** 第二弹
 
  [英语(English)](https://github.com/ra1ny-yuki/weschem) | **简体中文**
 
  一个用于获取同一机器上其他子服务器创世神原理图的MCDR插件。
- 
+
 ## 依赖
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
+- [Gitpython](https://pypi.org/project/GitPython/) (在系统命令行中输入`pip install gitpython`以快速安装)
 
 ## 配置小贴士
 - 初次加载插件生成配置后别忘了改，配置文件在MCDR工作目录下的`config/WESchem.json`
@@ -27,10 +28,20 @@
 列出玩家要求的子服务器中的所有原理图。
 
 3. `<Prefix> fetch <sub-server> <schematic>`
-将另一子服中的原理图复制到当前子服中。
+将另一子服中的原理图复制到当前子服中，或者你可以将本地共享仓库里的原理图拿过来。
 
 4. `<Prefix> send <sub-server> <schematic>`
-将当前子服中的原理图复制到另一子服中。
+将当前子服中的原理图复制到另一子服中，或者你可以把这个子服里的原理图扔到本地共享仓库里。
 
-5. `<Prefix> reload
-重载本插件配置文件`config/WESchem.json`。
+5. `<Prefix> reload`
+  重载本插件配置文件`config/WESchem.json`。
+
+6. `<Prefix> push`
+  自本地共享仓库向远程仓库推送更改。
+
+7. `<Prefix> pull`
+   自远程仓库向本地共享仓库拉取更改。
+
+8. `<prefix> clear`
+
+   清理你的本地共享仓库，这会保留Markdown文件和文件夹。
