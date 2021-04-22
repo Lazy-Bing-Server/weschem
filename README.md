@@ -29,8 +29,8 @@ List all the schematics in the sub-server you input.
 3. `<Prefix> fetch <sub-server> <schematic>`
 Copy the schematic you want in one another sub-server to the sub-server you are currently in.
 
-4. `<Prefix> send <sub-server> <schematic>
+4. `<Prefix> send <sub-server> <schematic>`
 Copy the schematic you want in the sub-server you're currently in to one another sub-server.
 
-5. `<Prefix> reload
+5. `<Prefix> reload`
 Reload the configuration file `config/WESchem.json`.
