@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.1.0',
+	'version': '1.2.0-alpha1',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'A backup and restore backup plugin, with multiple backup slots',
 	'author': [
@@ -19,6 +19,8 @@ import os
 import re
 import shutil
 from mcdreforged.api.all import *
+import datetime
+import git
 
 defaultConfig = '''
 {
@@ -26,7 +28,8 @@ defaultConfig = '''
 	"current_path": "server/config/worldedit/schematics",
     "servers": {
         "creative": "/home/creative/server/config/worldedit/schematics",
-        "mirror": "/home/mirror/server/config/worldedit/schematics"
+        "mirror": "/home/mirror/server/config/worldedit/schematics",
+		"git": "/home/LBS_Schematics_Library
     }
 }
 '''
@@ -42,10 +45,44 @@ helpMsg = f'''------ MCDR {PLUGIN_NAME_SHORT} v{PLUGIN_METADATA['version']} ----
 §7{Prefix} send§r §e<Sub-server> <Schematic>§r  将指定原理图投送至另一子服
 '''.strip()
 configFile = 'config/WESchem.json'
+logFile = 'logs/WESchem.log'
 config = defaultConfig
 
+class Logger:
+    def __init__(self, log_path: str):
+        self.path = os.path.join(log_path)
+        if not os.path.isfile(self.path):
+            with open(self.path, 'w+', encoding = 'utf-8') as f:
+                f.write('')
+    
+    def info(self, msg: str):
+        msg = msg.replace('§r', '').replace('§d', '').replace('§c', '').replace('§6', '').replace('§e', '').replace('§a', '')
+        self.save(msg)
+        self.show(msg)
+
+    def warning(self, msg: str):
+        msg = msg.replace('§r', '').replace('§d', '').replace('§c', '').replace('§6', '').replace('§e', '').replace('§a', '')
+        self.save(msg, True)
+        self.show(msg, True)
+    
+    def save(self, msg = '', warn = False):
+        warn_section = ''
+        if warn:
+            warn_section = 'WARNING!!!'
+        with open(self.path, 'a+') as log:
+            log.write(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]") + warn_section + msg + '\n')
+
+    def show(self, msg: str, warn = False):
+        warn_section = '32mINFO'
+        if warn:
+            warn_section = '33mWARNING'
+        print("[MCDR] " + datetime.datetime.now().strftime("[%H:%M:%S]") + ' [{}/\033[1;{}mINFO\033[0m] '.format(PLUGIN_METADATA['id'], warn_section) + msg)
+
+logger = Logger(logFile)
+
 def get_config():
-	if not os.path.exists(configFile):  
+	if not os.path.exists(configFile):
+		logger.info('Configuration file doesn\'t exists! Regenerated.')
 		with open(configFile, 'w+', encoding='UTF-8') as f:
 			f.write(defaultConfig)
 	with open(configFile, 'r', encoding='UTF-8') as f:
@@ -77,6 +114,7 @@ def show_help(source: CommandSource):
 def fetch_schematic(source: CommandSource, sub_server: str, schematic: str):
 	print_message(source, '正在获取原理图...')
 	source_path_list = config['servers']
+	src_name = src_to_name(source)
 	try:
 		source_path = os.path.join(source_path_list[sub_server], schematic)
 		if not os.path.exists(source_path):
@@ -84,9 +122,11 @@ def fetch_schematic(source: CommandSource, sub_server: str, schematic: str):
 			print_message(source, '§c原理图不存在!§r ' + call_list + f'查看该子服的原理图列表')
 			return
 		destination = os.path.join(config['current_path'], schematic)
-		excute_copy(source, source_path, destination)
+		excute_copy(source, source_path, destination)		
+		logger.info(src_name + ' successfully fetched schematic ' + schematic + ' from ' + sub_server)
 	except:
 		call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
+		logger.warning(src_name + f' failed fetching schematic {schematic} from {sub_server}. Does the specified sub-server exist?')
 		print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
 
 def anti_overwrite(source, dest_path: os.path):
@@ -97,6 +137,30 @@ def anti_overwrite(source, dest_path: os.path):
 	return dest_path
 
 @new_thread(PLUGIN_METADATA['id'])
+def send_schematic(source: CommandSource, sub_server: str, schematic):
+	src_name = src_to_name(source)
+	if sub_server == 'to_be_determined':
+		list_sub_server_to_send(source, schematic)
+	else:
+		print_message(source, '正在投送原理图...')
+		target_path_list = config['servers']
+		source_path = os.path.join(config['current_path'], schematic)
+		try:
+			destination = os.path.join(target_path_list[sub_server], schematic)
+			if not os.path.exists(source_path):
+				call_list = command_run('§a点此§r', '点此查看原理图列表', f'{Prefix} list current')
+				print_message(source, '§c原理图不存在!§r ' + call_list + f'查看当前子服原理图列表')
+				return
+			excute_copy(source, source_path, destination, False, sub_server)
+			logger.info(src_name + ' successfully sent schematic ' + schematic + ' from ' + sub_server)
+			if sub_server.startswith('git'):
+				git_add_commit(src_name, schematic)
+		except:
+			call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
+			print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
+			logger.warning(src_name + f' failed sending schematic {schematic} from {sub_server}. Does the specified sub-server exist?')
+
+@new_thread(PLUGIN_METADATA['id'])
 def excute_copy(source: CommandSource, source_path: os.path, destination: os.path, fetch = True, target_server = 'current'):
 	if fetch:
 		part_1 = '获取'
@@ -105,6 +169,7 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 	dest_transfered = anti_overwrite(source, destination)
 	if not dest_transfered == destination:
 		print_message(source, f'同名原理图已存在，目标原理图另存为§b{os.path.split(dest_transfered)[1]}§r', True, '')
+		logger.info('Schematic with the same name exists already! The new one is rename as {}'.format(os.path.split(dest_transfered)[1]))
 	try:
 		shutil.copyfile(source_path, dest_transfered)
 	except Exception as e:
@@ -117,6 +182,51 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 		else:
 			part_3 = command_run(f'§a点此§r', f'点此跳转到{target_server}', f'/server {target_server}') + '跳转到目标子服'
 		print_message(source, f'{part_1}原理图§a成功§r, ' + part_3, tell = True, prefix = '')
+
+def src_to_name(source: CommandSource): 
+	if source.is_player:
+		src_name = source.player
+	else:
+		src_name = 'Console'
+	return src_name
+
+@new_thread(PLUGIN_METADATA['id'])
+def git_add_commit(source: CommandSource, schematic: str):
+	src_name = src_to_name()
+	try:
+		repo.index.add(schematic)
+		repo.index.commit(f'{src_name} commited changes.')
+		result = '§a成功§r'
+		logger.info('{} commited §b{}§r to local reposities successfully.'.format(src_name, schematic))
+	except Exception as e:
+		result = '§c失败§r, 原因: ' + e
+		logger.info('{} failed commiting §b{}§r to local reposities, reason: {}'.format(src_name, schematic, e))
+	print_message(source, '向本地仓库提交原理图§b'+ schematic + result)
+
+@new_thread(PLUGIN_ID)
+def git_push(source: CommandSource):
+	src_name = src_to_name(source)
+	try:
+		repo.remote().push()
+		result = '§a成功§r'
+		logger.info('{} pushed changes to online reposities successfully.'.format(src_name))
+	except Exception as e:
+		result = '§c失败§r, 原因: ' + e
+		logger.info('{} failed pushing changes to online reposities, reason: {}'.format(src_name, e))
+	print_message(source, '向公用仓库推送改动' + result)
+	
+
+@new_thread(PLUGIN_ID)
+def git_pull(source: CommandSource):
+	src_name = src_to_name(source)
+	try:
+		repo.remote().pull()
+		result = '§a成功§r'
+		logger.info('{} pulled changes from online reposities successfully.'.format(src_name))
+	except Exception as e:
+		result = '§c失败§r, 原因: ' + e
+		logger.info('{} failed pulling changes from online reposities, reason: {}'.format(src_name, e))
+	print_message(source, '自公用仓库拉取改动' + result)
 
 @new_thread(PLUGIN_METADATA['id'])
 def list_schematic(source: CommandSource, sub_server: str):
@@ -170,26 +280,6 @@ def list_sub_server_to_send(source: CommandSource, schematic: str):
 		number = number + 1
 		server_name = command_run(f'§b{servers}§r', f'将原理图§l{schematic}§r投送到{servers}', f'{Prefix} send {servers} {schematic}')
 		print_message(source, server_name, True, f'[{str(number)}]')
-
-@new_thread(PLUGIN_METADATA['id'])
-def send_schematic(source: CommandSource, sub_server: str, schematic):
-	if sub_server == 'to_be_determined':
-		list_sub_server_to_send(source, schematic)
-	else:
-		print_message(source, '正在投送原理图...')
-		target_path_list = config['servers']
-		source_path = os.path.join(config['current_path'], schematic)
-		try:
-			destination = os.path.join(target_path_list[sub_server], schematic)
-			if not os.path.exists(source_path):
-				call_list = command_run('§a点此§r', '点此查看原理图列表', f'{Prefix} list current')
-				print_message(source, '§c原理图不存在!§r ' + call_list + f'查看当前子服原理图列表')
-				return
-			excute_copy(source, source_path, destination, False, sub_server)
-		except:
-			call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
-			print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
-
 	
 @new_thread(PLUGIN_METADATA['id'])
 def list_sub_server(source: CommandSource):
@@ -210,6 +300,8 @@ def reload(source: CommandSource):
 		
 def on_load(server: ServerInterface, prev_module):
 	get_config()
+	global repo
+	repo = git.Repo(config['servers']['git'])
 	rprefix = command_run(f'§7{Prefix}§f', '点我获取帮助', Prefix)
 	def print_error_msg(source):
 		print_message(source, '§c指令错误! §r请输入§7' + rprefix + '§r以获取插件帮助')
@@ -232,6 +324,12 @@ def on_load(server: ServerInterface, prev_module):
 					then(GreedyText('sub_server').
 						runs(lambda src, ctx: list_schematic(src, ctx['sub_server']))
 			))).
+		then(
+			Literal('push').runs(lambda src: git_push(src))
+		).
+		then(
+			Literal('pull').runs(lambda src: git_pull(src))
+		).
 		then(
 			Literal('reload').runs(lambda src: reload(src))
 		)
