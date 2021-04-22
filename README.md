@@ -30,12 +30,12 @@ List all the schematics in the sub-server you input.
 3. `<Prefix> fetch <sub-server> <schematic>`
   Copy the schematic you want in one another sub-server to the sub-server you are currently in.
 
-  Or you can fetch schematic from local share reposity, which is named as `git` in game.
+   Or you can fetch schematic from local share reposity, which is named as `git` in game.
 
 4. `<Prefix> send <sub-server> <schematic>`
   Copy the schematic you want in the sub-server you're currently in to one another sub-server.
 
-  Or you can send schematic to local share reposity.
+   Or you can send schematic to local share reposity.
 
 5. `<Prefix> reload`
   Reload the configuration file `config/WESchem.json`.
