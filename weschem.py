@@ -110,6 +110,13 @@ def show_help(source: CommandSource):
 		else:
 			print_message(source, line, True, '')
 
+def src_to_name(source: CommandSource): 
+	if source.is_player:
+		src_name = source.player
+	else:
+		src_name = 'Console'
+	return src_name
+
 @new_thread(PLUGIN_METADATA['id'])
 def fetch_schematic(source: CommandSource, sub_server: str, schematic: str):
 	print_message(source, '正在获取原理图...')
@@ -154,7 +161,7 @@ def send_schematic(source: CommandSource, sub_server: str, schematic):
 			excute_copy(source, source_path, destination, False, sub_server)
 			logger.info(src_name + ' successfully sent schematic ' + schematic + ' from ' + sub_server)
 			if sub_server.startswith('git'):
-				git_add_commit(src_name, schematic)
+				git_add_commit(source, schematic)
 		except:
 			call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
 			print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
@@ -182,13 +189,6 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 		else:
 			part_3 = command_run(f'§a点此§r', f'点此跳转到{target_server}', f'/server {target_server}') + '跳转到目标子服'
 		print_message(source, f'{part_1}原理图§a成功§r, ' + part_3, tell = True, prefix = '')
-
-def src_to_name(source: CommandSource): 
-	if source.is_player:
-		src_name = source.player
-	else:
-		src_name = 'Console'
-	return src_name
 
 @new_thread(PLUGIN_METADATA['id'])
 def git_add_commit(source: CommandSource, schematic: str):
