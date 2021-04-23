@@ -6,6 +6,9 @@
 
  一个用于获取同一机器上其他子服务器创世神原理图的MCDR插件。
  
+ 请原谅我写的这一坨连麻将都难以下咽的玩意，毕竟平常只是用在懒兵服...
+ 不过功能都是完整并且尽量做到了人性化的，请放心使用
+ 
 ## 依赖
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
