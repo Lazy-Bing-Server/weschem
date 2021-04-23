@@ -7,6 +7,8 @@
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
   
   This branch is the **early preview version** for this plugin, may contain some unstable fuctions and annoying bugs.
+  
+  Click [here](github.com/Lazy-Bing-Server/weschem) to view current stable version.
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
