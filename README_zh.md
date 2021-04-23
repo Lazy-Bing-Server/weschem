@@ -9,6 +9,8 @@
  请原谅我写的这一坨连麻将都难以下咽的玩意，毕竟平常只是用在懒兵服...
  不过功能都是完整并且尽量做到了人性化的，请放心使用
  
+ 戳[这里](https://github.com/Lazy-Bing-Server/weschem/tree/git_test)查看本插件的早期预览版本
+ 
 ## 依赖
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
