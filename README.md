@@ -6,7 +6,9 @@
 
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
   
-  Otherwise, please forgive me for the messy codes, because it's just mainly used in LBS. 
+  Otherwise, please forgive me for this shit codes, after all it's just mainly used in LBS. 
+  
+  But you can take it ez to use it, the functions are fully done and personalized as much as possible.
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
