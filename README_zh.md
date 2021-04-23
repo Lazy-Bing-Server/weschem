@@ -8,13 +8,6 @@
  
  本分支是本插件的**早期预览版本**，可能会包含一些不稳定功能和烦人的虫。
  
-## 预览版更新日志
-**1.2.0-alpha3** 新增清理本地临时git仓库功能
-
-**1.2.0-alpha2** 修复了一系列问题
-
-**1.2.0-alpha1** 新增利用git向远程仓库同步原理图功能
-
 ## 依赖
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
 - [WorldEdit](https://www.curseforge.com/minecraft/mc-mods/worldedit)
@@ -54,3 +47,10 @@
 8. `<prefix> clear`
 
    清理你的本地共享仓库，这会保留Markdown文件和文件夹。
+   
+## 预览版更新日志
+**1.2.0-alpha3** 新增清理本地临时git仓库功能
+
+**1.2.0-alpha2** 修复了一系列问题
+
+**1.2.0-alpha1** 新增利用git向远程仓库同步原理图功能
