@@ -8,7 +8,7 @@
  
  本分支是本插件的**早期预览版本**，可能会包含一些不稳定功能和烦人的虫。
  
- 戳[这里](github.com/Lazy-Bing-Server/weschem)查看当前稳定版本。
+ 戳[这里](https://github.com/Lazy-Bing-Server/weschem)查看当前稳定版本。
  
 ## 依赖
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
