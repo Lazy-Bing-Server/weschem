@@ -54,9 +54,9 @@ List all the schematics in the sub-server you input.
      
 ## Preview Versions Changelog
   
-  **1.2.0-alpha3** Added clearing local git repo.
+**1.2.0-alpha3** Added clearing local git repo.
 
-  **1.2.0-alpha2** Fixed several issues.
+**1.2.0-alpha2** Fixed several issues.
 
-  **1.2.0-alpha1** Added syncing schematic to remote repo with git.
+**1.2.0-alpha1** Added syncing schematic to remote repo with git.
 
