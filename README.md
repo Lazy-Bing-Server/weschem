@@ -2,7 +2,7 @@
 
 **Project Creative Enchancer Workshop** #2
 
-  **English** | [简体中文(Simplified Chinese)](https://github.com/ra1ny-yuki/weschem/blob/main/README_zh.md)
+  **English** | [简体中文(Simplified Chinese)](https://github.com/ra1ny-yuki/weschem/blob/git_test/README_zh.md)
 
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
   
