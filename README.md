@@ -8,7 +8,7 @@
   
   This branch is the **early preview version** for this plugin, may contain some unstable fuctions and annoying bugs.
   
-  Click [here](github.com/Lazy-Bing-Server/weschem) to view current stable version.
+  Click [here](https://github.com/Lazy-Bing-Server/weschem) to view current stable version.
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
