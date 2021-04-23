@@ -9,6 +9,8 @@
   Otherwise, please forgive me for this shit codes, after all it's just mainly used in LBS. 
   
   But you can take it ez to use it, the functions are fully done and personalized as much as possible.
+  
+ Click [here](https://github.com/Lazy-Bing-Server/weschem/tree/git_test) to view the preview version.
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
