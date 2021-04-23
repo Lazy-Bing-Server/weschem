@@ -49,7 +49,6 @@ List all the schematics in the sub-server you input.
    Pull your changes from the remote reposity to the local share reposity.
 
 8. `<prefix> clear`
-
    Clear your local share reposity. Folders and markdown files will be kept.
      
 ## Preview Versions Changelogs
