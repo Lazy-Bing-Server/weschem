@@ -52,7 +52,7 @@ List all the schematics in the sub-server you input.
 
    Clear your local share reposity. Folders and markdown files will be kept.
      
-## Preview Versions Changelog
+## Preview Versions Changelogs
   
 **1.2.0-alpha3** Added clearing local git repo.
 
