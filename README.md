@@ -6,7 +6,15 @@
 
   A MCDR plugin to fetch WorldEdit Schematics in the other sub-server on the same server.
   
-  This branch is the **early preview branch** for this plugin, may include some unstable fuctions and annoying bugs.
+  This branch is the **early preview version** for this plugin, may contain some unstable fuctions and annoying bugs.
+  
+## Preview Versions Changelog
+  
+**1.2.0-alpha3** Added clearing local git repo.
+
+**1.2.0-alpha2** Fixed several issues.
+
+**1.2.0-alpha1** Added syncing schematic to remote repo with git.
 
 ## Requirement
 - [MCDReforged](https://github.com/Fallen-Breath/MCDReforged/) >= 1.0.0
