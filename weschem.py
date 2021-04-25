@@ -2,9 +2,9 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha4',
+	'version': '1.2.0-alpha5',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
-	'description': 'A backup and restore backup plugin, with multiple backup slots',
+	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
 		'Ra1ny_Yuki'
 	],
