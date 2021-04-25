@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha5',
+	'version': '1.2.0-alpha6',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -343,10 +343,12 @@ def clear_local_repo(source: CommandSource, abort = False):
 	if abort and clear_flag:
 		print_message(source, '已§c取消§r清理')
 	elif clear_flag and not abort:
+		global clear_flag
+		clear_flag = False
 		for file in os.listdir(config['servers']['git']):
 			file_path = os.path.join(config['servers']['git'], file)
 			if os.path.isfile(file_path) and not file.endswith('.md'):
-				os.remove(file_path)
+				repo.index.remove(file_path)
 		src_name = src_to_name(source)
 		repo.index.commit(f'{src_name} cleared local reposity.')
 		print_message(source, '已§A完成§r清理')
