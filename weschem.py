@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha6',
+	'version': '1.2.0-alpha7',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -20,7 +20,7 @@ import re
 import shutil
 from mcdreforged.api.all import *
 import datetime
-import git
+from subprocess import check_output, CalledProcessError
 
 defaultConfig = '''
 {
@@ -32,6 +32,7 @@ defaultConfig = '''
 		"git": "/home/LBS-Schematics-Library"
     },
 	"console_name": "-Console",
+	"timeout": 30,
 	"remote_reposity": "https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git",
 	"permission":
 	{
@@ -98,6 +99,29 @@ class Logger:
         print("[MCDR] " + datetime.datetime.now().strftime("[%H:%M:%S]") + ' [{}/\033[1;{}\033[0m] '.format(PLUGIN_ID, warn_section) + msg)
 
 logger = Logger(logFile)
+
+class Repo:
+	def __init__(self, local_path: str, remote_path: str) -> None:
+		self.local_path = local_path
+		self.remote_path = remote_path
+
+	def add(self, file: str):
+		self.excute(f'git add {file}')
+
+	def remove(self, file: str):
+		self.excute(f'git remove {file}')
+		
+	def commit(self, text: str):
+		self.excute(f'git commit -am "{text}"')
+
+	def push(self, remote_branch = 'main', local_branch = 'main', remote_address = 'origin'):
+		self.excute(f'git push {remote_address} {local_branch}:{remote_branch}')
+	
+	def pull(self, remote_branch = 'main', local_branch = 'main', remote_address = 'origin'):
+		self.excute(f'git pull {remote_address} {remote_branch}:{local_branch}')
+	
+	def excute(self, command: str):
+		check_output(command, cwd = self.local_path, timeout = config['timeout'])
 
 def get_config():
 	if not os.path.exists(configFile):
@@ -225,8 +249,8 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 def git_add_commit(source: CommandSource, schematic: str):
 	src_name = src_to_name(source)
 	try:
-		repo.index.add(schematic)
-		repo.index.commit(f'{src_name} committed {schematic}.')
+		repo.add(schematic)
+		repo.commit(f'{src_name} committed {schematic}.')
 		result = '§a成功§r, ' + command_run(f'§a点此§r', f'向在线仓库推送改动', '!!wes push') + '向Github仓库推送改动'
 		logger.info('{} commited §b{}§r to local reposities successfully.'.format(src_name, schematic))
 	except Exception as e:
@@ -238,12 +262,18 @@ def git_add_commit(source: CommandSource, schematic: str):
 def git_push(source: CommandSource):
 	src_name = src_to_name(source)
 	try:
-		repo.remote().push()
-		result = '§a成功§r, ' + RText('点此').set_click_event(RAction.open_url, config['remote_reposity']).set_color(RColor.green) + '查看'
-		logger.info('{} pushed changes to online reposities successfully.'.format(src_name))
+		repo.push()
+		result = '§a成功§r, ' + RText('点此').set_click_event(RAction.open_url, config['remote_reposity']).set_color(RColor.green) + '查看远程仓库'
+		logger.info('{} pushed changes to remote reposities successfully.'.format(src_name))
+	except TimeoutError:
+		result = '§c失败§r, 操作执行§c超时§r, 请告知管理员检查网络'
+		logger.info('{} failed pushing changes to remote reposities, time out.')
+	except CalledProcessError:
+		result = '§c失败§r, 远程仓库可能存在未拉取的改动, ' + command_run('点此', '拉取未合并的改动', '!!wes pull').set_color(RColor.gray) + '拉取这些改动后方可再行推送, 若无效请通知管理员'
+		logger.info('{} failed pushing changes to remote reposities, the remote contains work that you do not have locally or invaild connection to your remote repo.')
 	except Exception as e:
-		result = '§c失败§r, 原因: ' + str(e)
-		logger.info('{} failed pushing changes to online reposities, reason: {}'.format(src_name, e))
+		result = '§c失败§r, git意外退出, 原因: ' + str(e)
+		logger.info('{} failed pushing changes to remote reposities, reason: {}'.format(src_name, e))
 	print_message(source, '向公用仓库推送改动' + result)
 	
 
@@ -251,12 +281,18 @@ def git_push(source: CommandSource):
 def git_pull(source: CommandSource):
 	src_name = src_to_name(source)
 	try:
-		repo.remote().pull()
-		result = '§a成功§r'
-		logger.info('{} pulled changes from online reposities successfully.'.format(src_name))
+		repo.pull()
+		result = '§a成功§r' + command_run('点此', '查看本地仓库', '!!wes list git') + '查看本地仓库'
+		logger.info('{} pulled changes from remote reposities successfully.'.format(src_name))
+	except TimeoutError:
+		result = '§c失败§r, 操作执行§c超时§r, 请告知管理员检查网络'
+		logger.info('{} failed pushing changes to remote reposities, time out.')
+	except CalledProcessError:
+		result = '§c失败§r, 向远程仓库请求拉取§c失败§r, 请告知管理员检查网络'
+		logger.info('{} failed pushing changes to remote reposities, invaild connection to your remote repo.')
 	except Exception as e:
-		result = '§c失败§r, 原因: ' + e
-		logger.info('{} failed pulling changes from online reposities, reason: {}'.format(src_name, e))
+		result = '§c失败§r, git意外退出, 原因: ' + str(e)
+		logger.info('{} failed pulling changes from remote reposities, reason: {}'.format(src_name, e))
 	print_message(source, '自公用仓库拉取改动' + result)
 
 @new_thread(PLUGIN_ID)
@@ -348,9 +384,9 @@ def clear_local_repo(source: CommandSource, abort = False):
 		for file in os.listdir(config['servers']['git']):
 			file_path = os.path.join(config['servers']['git'], file)
 			if os.path.isfile(file_path) and not file.endswith('.md'):
-				repo.index.remove(file_path)
+				repo.remove(file_path)
 		src_name = src_to_name(source)
-		repo.index.commit(f'{src_name} cleared local reposity.')
+		repo.commit(f'{src_name} cleared local reposity.')
 		print_message(source, '已§A完成§r清理')
 	else:
 		print_message(source, '没要求清理啊rue')
@@ -360,7 +396,7 @@ def clear_local_repo(source: CommandSource, abort = False):
 def on_load(server: ServerInterface, prev_module):
 	get_config()
 	global repo
-	repo = git.Repo(config['servers']['git'])
+	repo = Repo(config['servers']['git'], config['servers']['remote_reposity'])
 	rprefix = command_run(f'§7{Prefix}§f', '点我获取帮助', Prefix)
 
 	def print_error_msg(source: CommandSource):
