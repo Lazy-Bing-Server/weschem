@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha3',
+	'version': '1.2.0-alpha4',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'A backup and restore backup plugin, with multiple backup slots',
 	'author': [
@@ -31,7 +31,8 @@ defaultConfig = '''
         "mirror": "/home/mirror/server/config/worldedit/schematics",
 		"git": "/home/LBS-Schematics-Library"
     },
-	"remote_reposity": "https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git"
+	"console_name": "-Console",
+	"remote_reposity": "https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git",
 	"permission":
 	{
 		"clear": 2,
@@ -138,7 +139,7 @@ def src_to_name(source: CommandSource):
 	if source.is_player:
 		src_name = source.player
 	else:
-		src_name = '@LBServer-VM'
+		src_name = config['console_name']
 	return src_name
 
 @new_thread(PLUGIN_ID)
