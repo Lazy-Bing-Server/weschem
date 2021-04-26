@@ -49,8 +49,9 @@
 8. `<prefix> clear`
 
    清理你的本地共享仓库，这会保留Markdown文件和文件夹。
-   
 ## 预览版更新日志
+
+**1.2.0-alpha8** 修复了某些POSIX操作系统上找不到git指令的问题，此外允许指定git路径了
 
 **1.2.0-alpha7** 修改了git同步原理图功能，不再依赖gitpython，细化了git报错处理
 

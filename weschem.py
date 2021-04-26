@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha7',
+	'version': '1.2.0-alpha8',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -34,6 +34,7 @@ defaultConfig = '''
 	"console_name": "-Console",
 	"timeout": 30,
 	"remote_reposity": "https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git",
+	"git_command": "git", 
 	"permission":
 	{
 		"clear": 2,
@@ -101,27 +102,32 @@ class Logger:
 logger = Logger(logFile)
 
 class Repo:
-	def __init__(self, local_path: str, remote_path: str) -> None:
-		self.local_path = local_path
-		self.remote_path = remote_path
+	def __init__(self, local_path: str) -> None:
+		self.local_path = os.path.join(local_path)
+		self.arg_list = [config['git_command']]
 
 	def add(self, file: str):
-		self.excute(f'git add {file}')
+		args = self.arg_list.copy() + ['add', file]
+		self.excute(args)
 
 	def remove(self, file: str):
-		self.excute(f'git remove {file}')
+		args = self.arg_list.copy() + ['rm', file]
+		self.excute(args)
 		
 	def commit(self, text: str):
-		self.excute(f'git commit -am "{text}"')
+		args = self.arg_list.copy() + ['commit', '-am', f'"{text}"']
+		self.excute(args)
 
 	def push(self, remote_branch = 'main', local_branch = 'main', remote_address = 'origin'):
-		self.excute(f'git push {remote_address} {local_branch}:{remote_branch}')
+		args = self.arg_list.copy() + ['push', remote_address, f'{local_branch}:{remote_branch}']
+		self.excute(args)
 	
 	def pull(self, remote_branch = 'main', local_branch = 'main', remote_address = 'origin'):
-		self.excute(f'git pull {remote_address} {remote_branch}:{local_branch}')
+		args = self.arg_list.copy() + ['pull', remote_address, f'{remote_branch}:{local_branch}']
+		self.excute(args)
 	
-	def excute(self, command: str):
-		check_output(command, cwd = self.local_path, timeout = config['timeout'])
+	def excute(self, command: list):
+		check_output(command, timeout = config['timeout'], cwd = self.local_path)
 
 def get_config():
 	if not os.path.exists(configFile):
@@ -228,7 +234,9 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 		print_message(source, f'同名原理图已存在，目标原理图另存为§b{os.path.split(dest_transfered)[1]}§r', True, '')
 		logger.info('Schematic with the same name exists already! The newer one is rename as {}'.format(os.path.split(dest_transfered)[1]))
 	try:
+		logger.info(source_path + ' ' + dest_transfered)
 		shutil.copyfile(source_path, dest_transfered)
+		#shutil.copyfile(dest_transfered, source_path)
 	except Exception as e:
 		print_message(source, f'{part_1}原理图§c失败§r, 原因：§4{e}§r', tell = True, prefix = '')
 
@@ -376,10 +384,10 @@ def request_clear(source: CommandSource):
 
 @new_thread(PLUGIN_ID)
 def clear_local_repo(source: CommandSource, abort = False):
+	global clear_flag
 	if abort and clear_flag:
 		print_message(source, '已§c取消§r清理')
 	elif clear_flag and not abort:
-		global clear_flag
 		clear_flag = False
 		for file in os.listdir(config['servers']['git']):
 			file_path = os.path.join(config['servers']['git'], file)
@@ -396,7 +404,7 @@ def clear_local_repo(source: CommandSource, abort = False):
 def on_load(server: ServerInterface, prev_module):
 	get_config()
 	global repo
-	repo = Repo(config['servers']['git'], config['servers']['remote_reposity'])
+	repo = Repo(config['servers']['git'])
 	rprefix = command_run(f'§7{Prefix}§f', '点我获取帮助', Prefix)
 
 	def print_error_msg(source: CommandSource):
