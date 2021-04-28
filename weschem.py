@@ -56,6 +56,7 @@ configFile = 'config/WESchem.json'
 clear_flag = False
 enableGit = True
 action_progressing = Lock()
+action_progressing.acquire(blocking = False)
 
 class Config:
 	def __init__(self, config_path: str) -> None:
@@ -510,3 +511,4 @@ def on_load(server: ServerInterface, prev_module):
 		)
 	)
 	server.register_help_message(Prefix, '从指定子服处获取WorldEdit原理图至本服')
+	action_progressing.release()
