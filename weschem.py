@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-beta1',
+	'version': '1.2.0-beta2',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -27,17 +27,16 @@ defaultConfig = {
 	'cmd_prefix': '!!weschem',
 	'cmd_prefix_short': '!!wes',
 	'log_path': 'logs/WESchem.log',
-	'current_subserver': 'qmirror',
+	'current_subserver': 'mirror',
 	'current_path': 'server/config/worldedit/schematics',
     'servers': {
-        'creative': '/home/creative/server/config/worldedit/schematics',
-        'mirror': '/home/mirror/server/config/worldedit/schematics',
-		'git': '/home/LBS-Schematics-Library'
+        'creative': '/content/creative/server/config/worldedit/schematics',
+		'git': '/content/git_library'
     },
 	'console_name': '-Console',
 	'enable_git': False,
 	'timeout': 30,
-	'remote_reposity': 'https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git',
+	'remote_reposity': 'https://github.com/for_example/example.git',
 	'git_command': 'git', 
 	'permission':
 	{
@@ -56,7 +55,6 @@ configFile = 'config/WESchem.json'
 clear_flag = False
 enableGit = True
 action_progressing = Lock()
-action_progressing.acquire(blocking = False)
 
 class Config:
 	def __init__(self, config_path: str) -> None:
@@ -68,7 +66,7 @@ class Config:
 	def load(self, server: ServerInterface):
 		if self.logger is None:
 			self.logger = server.logger
-		self.index = defaultConfig.copy()
+		self.index = defaultConfig
 		if not os.path.isfile(self.path):
 			with open(self.path, 'w+', encoding = 'UTF-8') as f:
 				f.write('')
@@ -90,12 +88,17 @@ class Config:
 				content += item
 			with open(self.path, 'w+', encoding = 'UTF-8') as file:
 				file.write(content)
+			server.say('[WESchem] 插件加载过程中重新生成了配置中无效的键值, 请通知服务器管理员检查配置文件')
 			logger.info('Regenerated invalid keys with their default value: '+ str(list(defaultConfig.keys() - data.keys())).strip('[]'))
 		self.logger = Logger(self.index['log_path'])
-		global Prefix, Prefix_short, enableGit
+		global Prefix, Prefix_short, enableGit, repo
 		Prefix = self.index['cmd_prefix']
 		Prefix_short = self.index['cmd_prefix_short']
 		enableGit = self.index['enable_git']
+		try:
+			repo = Repo(config['servers']['git'])
+		except KeyError:
+			enableGit = False
 	
 	def __getitem__(self, key):
 		return self.index[key]		
@@ -145,7 +148,7 @@ class Repo:
 		self.excute(args)
 		
 	def commit(self, text: str):
-		args = self.arg_list.copy() + ['commit', '-am', f'"{text}"']
+		args = self.arg_list.copy() + ['commit', '-am', f"{text}"]
 		self.excute(args)
 
 	def push(self, remote_branch = 'main', local_branch = 'main', remote_address = 'origin'):
@@ -174,20 +177,20 @@ def command_suggest(message: str, text: str, command: str):
 
 def show_help(source: CommandSource):
 	helpMsg = f'''---- MCDR {PLUGIN_NAME_SHORT} v§7{PLUGIN_METADATA['version']}§r ----
-各创造子服间WE原理图快速投送插件，并可将原理图上传至Github供下载
+各创造子服间WE原理图快速投送插件，并可将原理图上传至远程仓库供下载
 §d【指令帮助】§r
 指令前缀§7{Prefix}§r可缩写为§7{Prefix_short}§r
 §7{Prefix}§r 显示本插件帮助。
 §7{Prefix} list§r §e<Sub-server>§r 显示指定子服的原理图列表
 §7{Prefix} fetch§r §e<Sub-server> <Schematic>§r  获取另一子服的指定原理图
 §7{Prefix} send§r §e<Sub-server> <Schematic>§r  将指定原理图投送至另一子服
-§7{Prefix} push§r 向Github公用仓库提交改动
-§7{Prefix} pull§r 自Github公用仓库拉取改动
+§7{Prefix} push§r 向远程仓库提交改动
+§7{Prefix} pull§r 自远程仓库拉取改动
 §7{Prefix} clear§r 清理本地临时仓库
 §d【上传&下载原理图】§r
-将原理图复制到list中名为git的本地仓库后使用push指令可上传至Github仓库
-将原理图提交到Github仓库后可从git子服(仓库)中获取提交的原理图
-关于Github仓库的访问方式请询问管理员
+将原理图复制到list中名为git的本地仓库后使用push指令可上传至远程仓库
+将原理图提交到远程仓库后可从git子服(仓库)中获取提交的原理图
+关于远程仓库的访问方式请询问管理员
 '''.strip()
 	msg = ''
 	for line in helpMsg.splitlines():
@@ -243,10 +246,10 @@ def anti_overwrite(source, dest_path: os.path):
 def send_schematic(source: CommandSource, sub_server: str, schematic: str):
 	global action_progressing
 	src_name = src_to_name(source)
-	if sub_server == 'to_be_determined':
-		list_sub_server_to_send(source, schematic)
 	if not schematic.endswith('.schem') and not schematic.endswith('.schematic'):
 		schematic += '.schem'
+	if sub_server == 'to_be_determined':
+		list_sub_server_to_send(source, schematic)
 	else:
 		action_progressing.acquire(blocking = True)
 		print_message(source, '正在投送原理图...')
@@ -294,8 +297,8 @@ def git_add_commit(source: CommandSource, schematic: str):
 	src_name = src_to_name(source)
 	try:
 		repo.add(schematic)
-		repo.commit(f'{src_name} committed {schematic}.')
-		result = '§a成功§r, ' + command_run(f'§a点此§r', f'向在线仓库推送改动', '!!wes push') + '向Github仓库推送改动'
+		repo.commit(f"{src_name} committed {schematic} from {config['current_subserver']}.")
+		result = '§a成功§r, ' + command_run(f'§a点此§r', f'向在线仓库推送改动', '!!wes push') + '向远程仓库推送改动'
 		logger.info('{} commited §b{}§r to local reposities successfully.'.format(src_name, schematic))
 	except Exception as e:
 		result = '§c失败§r, 原因: ' + str(e)
@@ -454,13 +457,9 @@ def clear_local_repo(source: CommandSource, abort = False):
 		print_message(source, '没要求清理啊rue')
 		
 def on_load(server: ServerInterface, prev_module):
-	global repo, enableGit, logger
+	global logger
 	config.load(server)
 	logger = config.logger
-	try:
-		repo = Repo(config['servers']['git'])
-	except KeyError:
-		enableGit = False
 	rprefix = command_run(f'§7{Prefix}§f', '点我获取帮助', Prefix)
 
 	def print_error_msg(source: CommandSource, error_type = 'cmd'):
@@ -469,7 +468,7 @@ def on_load(server: ServerInterface, prev_module):
 
 	def permed_literal(literal: str):
 		lvl = config['permission'].get(literal, 0)
-		return Literal(literal).requires(lambda src: src.has_permission(lvl), failure_message_getter = lambda: f'§f[WESchem] §c权限不足, 你想桃子呢, 需要{lvl}§r')
+		return Literal(literal).requires(lambda src: src.has_permission(lvl), failure_message_getter = lambda: f'§f[WESchem] §c权限不足, 你想桃子呢, 需要权限等级{lvl}§r')
 	server.register_command(
 		Literal({Prefix, Prefix_short}).on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).
 		runs(lambda src: show_help(src)).
@@ -486,7 +485,7 @@ def on_load(server: ServerInterface, prev_module):
 		then(
 			permed_literal('list').
 				runs(lambda src: list_sub_server(src)).
-					then(Literal('current').runs(lambda src: list_schematic_current(src, config)).
+					then(Literal('current').runs(lambda src: list_schematic_current(src)).
 						then(QuotableText('target_server').runs(lambda src, ctx: list_schematic_current(src, config, ctx['target_server'])))).
 					then(GreedyText('sub_server').
 						runs(lambda src, ctx: list_schematic(src, ctx['sub_server']))
@@ -511,4 +510,3 @@ def on_load(server: ServerInterface, prev_module):
 		)
 	)
 	server.register_help_message(Prefix, '从指定子服处获取WorldEdit原理图至本服')
-	action_progressing.release()
