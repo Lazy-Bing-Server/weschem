@@ -54,6 +54,8 @@ List all the schematics in the sub-server you input.
    Clear your local share reposity. Folders and markdown files will be kept.
 ## Preview Versions Changelogs
 
+**1.2.0-beta1** Mass user experience improve and issue fixes.
+
 **1.2.0-alpha8** Fixed git command not found on certain POSIX OS. And now you can change git path in config file.
 
 **1.2.0-alpha7** Corrected syncing with git. Now no longer depends on gitpython, and process git exception better.
