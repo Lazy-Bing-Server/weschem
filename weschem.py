@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-alpha8',
+	'version': '1.2.0-beta1',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -13,61 +13,92 @@ PLUGIN_METADATA = {
 		'mcdreforged': '>=1.0.0',
 	}
 }
-
 import json
+from json.decoder import JSONDecodeError
 import os
 import re
 import shutil
 from mcdreforged.api.all import *
 import datetime
 from subprocess import check_output, CalledProcessError
+from threading import Lock
 
-defaultConfig = '''
-{
-	"current_subserver": "qmirror",
-	"current_path": "server/config/worldedit/schematics",
-    "servers": {
-        "creative": "/home/creative/server/config/worldedit/schematics",
-        "mirror": "/home/mirror/server/config/worldedit/schematics",
-		"git": "/home/LBS-Schematics-Library"
+defaultConfig = {
+	'cmd_prefix': '!!weschem',
+	'cmd_prefix_short': '!!wes',
+	'log_path': 'logs/WESchem.log',
+	'current_subserver': 'qmirror',
+	'current_path': 'server/config/worldedit/schematics',
+    'servers': {
+        'creative': '/home/creative/server/config/worldedit/schematics',
+        'mirror': '/home/mirror/server/config/worldedit/schematics',
+		'git': '/home/LBS-Schematics-Library'
     },
-	"console_name": "-Console",
-	"timeout": 30,
-	"remote_reposity": "https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git",
-	"git_command": "git", 
-	"permission":
+	'console_name': '-Console',
+	'enable_git': False,
+	'timeout': 30,
+	'remote_reposity': 'https://github.com/Lazy-Bing-Server/LBS-Schematics-Library.git',
+	'git_command': 'git', 
+	'permission':
 	{
-		"clear": 2,
-		"fetch": 1,
-		"send": 1,
-		"list": 0,
-		"push": 1,
-		"pull": 1
+		'clear': 2,
+		'fetch': 1,
+		'send': 1,
+		'list': 0,
+		'push': 1,
+		'pull': 1
 	}
 }
-'''
+
 Prefix = '!!weschem'
 Prefix_short = '!!wes'
-helpMsg = f'''---- MCDR {PLUGIN_NAME_SHORT} v§7{PLUGIN_METADATA['version']}§r ----
-各创造子服间WE原理图快速投送插件，并可将原理图上传至Github供下载
-§d【指令帮助】§r
-指令前缀§7{Prefix}§r可缩写为§7{Prefix_short}§r
-§7{Prefix}§r 显示本插件帮助。
-§7{Prefix} list§r §e<Sub-server>§r 显示指定子服的原理图列表
-§7{Prefix} fetch§r §e<Sub-server> <Schematic>§r  获取另一子服的指定原理图
-§7{Prefix} send§r §e<Sub-server> <Schematic>§r  将指定原理图投送至另一子服
-§7{Prefix} push§r 向Github公用仓库提交改动
-§7{Prefix} pull§r 自Github公用仓库拉取改动
-§7{Prefix} clear§r 清理本地临时仓库
-§d【上传&下载原理图】§r
-将原理图复制到list中名为git的本地仓库后使用push指令可上传至Github仓库
-将原理图提交到Github仓库后可从git子服(仓库)中获取提交的原理图
-关于Github仓库的访问方式请询问管理员
-'''.strip()
 configFile = 'config/WESchem.json'
-logFile = 'logs/WESchem.log'
-config = defaultConfig
 clear_flag = False
+enableGit = True
+action_progressing = Lock()
+
+class Config:
+	def __init__(self, config_path: str) -> None:
+		self.path = os.path.join(config_path)
+		self.index = defaultConfig
+		self.logger = None
+	
+	@new_thread(PLUGIN_ID)
+	def load(self, server: ServerInterface):
+		if self.logger is None:
+			self.logger = server.logger
+		self.index = defaultConfig.copy()
+		if not os.path.isfile(self.path):
+			with open(self.path, 'w+', encoding = 'UTF-8') as f:
+				f.write('')
+		self.index = defaultConfig
+		with open(self.path, 'r', encoding = 'UTF-8') as f:
+			try:
+				data = json.load(f, encoding = 'UTF-8')
+			except JSONDecodeError:
+				data = {}
+				logger.info('Regenerated invalid config file.')
+		for key, value in data.items():
+			self.index[key] = value
+		if list(defaultConfig.keys() - data.keys()) != []:
+			js = json.dumps(self.index).split(',')
+			content = ''
+			for item in js:
+				if content != '':
+					content += ',\n'
+				content += item
+			with open(self.path, 'w+', encoding = 'UTF-8') as file:
+				file.write(content)
+			logger.info('Regenerated invalid keys with their default value: '+ str(list(defaultConfig.keys() - data.keys())).strip('[]'))
+		self.logger = Logger(self.index['log_path'])
+		global Prefix, Prefix_short, enableGit
+		Prefix = self.index['cmd_prefix']
+		Prefix_short = self.index['cmd_prefix_short']
+		enableGit = self.index['enable_git']
+	
+	def __getitem__(self, key):
+		return self.index[key]		
+config = Config(configFile)
 
 class Logger:
     def __init__(self, log_path: str):
@@ -99,8 +130,6 @@ class Logger:
             warn_section = '33mWARNING'
         print("[MCDR] " + datetime.datetime.now().strftime("[%H:%M:%S]") + ' [{}/\033[1;{}\033[0m] '.format(PLUGIN_ID, warn_section) + msg)
 
-logger = Logger(logFile)
-
 class Repo:
 	def __init__(self, local_path: str) -> None:
 		self.local_path = os.path.join(local_path)
@@ -129,15 +158,6 @@ class Repo:
 	def excute(self, command: list):
 		check_output(command, timeout = config['timeout'], cwd = self.local_path)
 
-def get_config():
-	if not os.path.exists(configFile):
-		logger.info('Configuration file doesn\'t exists! Regenerated.')
-		with open(configFile, 'w+', encoding='UTF-8') as f:
-			f.write(defaultConfig)
-	with open(configFile, 'r', encoding='UTF-8') as f:
-		global config
-		config = json.load(f, encoding='UTF-8')
-
 def print_message(source: CommandSource, msg: str, tell = True, prefix = '[WESchem] '):
     msg = prefix + msg
     if source.is_player and not tell:
@@ -152,6 +172,22 @@ def command_suggest(message: str, text: str, command: str):
 	return RText(message).set_hover_text(text).set_click_event(RAction.suggest_command, command)
 
 def show_help(source: CommandSource):
+	helpMsg = f'''---- MCDR {PLUGIN_NAME_SHORT} v§7{PLUGIN_METADATA['version']}§r ----
+各创造子服间WE原理图快速投送插件，并可将原理图上传至Github供下载
+§d【指令帮助】§r
+指令前缀§7{Prefix}§r可缩写为§7{Prefix_short}§r
+§7{Prefix}§r 显示本插件帮助。
+§7{Prefix} list§r §e<Sub-server>§r 显示指定子服的原理图列表
+§7{Prefix} fetch§r §e<Sub-server> <Schematic>§r  获取另一子服的指定原理图
+§7{Prefix} send§r §e<Sub-server> <Schematic>§r  将指定原理图投送至另一子服
+§7{Prefix} push§r 向Github公用仓库提交改动
+§7{Prefix} pull§r 自Github公用仓库拉取改动
+§7{Prefix} clear§r 清理本地临时仓库
+§d【上传&下载原理图】§r
+将原理图复制到list中名为git的本地仓库后使用push指令可上传至Github仓库
+将原理图提交到Github仓库后可从git子服(仓库)中获取提交的原理图
+关于Github仓库的访问方式请询问管理员
+'''.strip()
 	msg = ''
 	for line in helpMsg.splitlines():
 		if not msg == '':
@@ -174,9 +210,12 @@ def src_to_name(source: CommandSource):
 
 @new_thread(PLUGIN_ID)
 def fetch_schematic(source: CommandSource, sub_server: str, schematic: str):
+	action_progressing.acquire(blocking = True)
 	print_message(source, '正在获取原理图...')
 	source_path_list = config['servers']
 	src_name = src_to_name(source)
+	if not schematic.endswith('.schem') and not schematic.endswith('.schematic'):
+		schematic += '.schem'
 	try:
 		source_path = os.path.join(source_path_list[sub_server], schematic)
 		if not os.path.exists(source_path):
@@ -184,12 +223,13 @@ def fetch_schematic(source: CommandSource, sub_server: str, schematic: str):
 			print_message(source, '§c原理图不存在!§r ' + call_list + f'查看该子服的原理图列表')
 			return
 		destination = os.path.join(config['current_path'], schematic)
-		excute_copy(source, source_path, 'fetch', destination)		
+		excute_copy(source, source_path, destination, 'fetch')		
 		logger.info(src_name + ' successfully fetched schematic ' + schematic + ' from ' + sub_server)
 	except:
 		call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
 		logger.warning(src_name + f' failed fetching schematic {schematic} from {sub_server}. Does the specified sub-server exist?')
 		print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
+	action_progressing.release()
 
 def anti_overwrite(source, dest_path: os.path):
 	if os.path.exists(dest_path):
@@ -199,11 +239,15 @@ def anti_overwrite(source, dest_path: os.path):
 	return dest_path
 
 @new_thread(PLUGIN_ID)
-def send_schematic(source: CommandSource, sub_server: str, schematic):
+def send_schematic(source: CommandSource, sub_server: str, schematic: str):
+	global action_progressing
 	src_name = src_to_name(source)
 	if sub_server == 'to_be_determined':
 		list_sub_server_to_send(source, schematic)
+	if not schematic.endswith('.schem') and not schematic.endswith('.schematic'):
+		schematic += '.schem'
 	else:
+		action_progressing.acquire(blocking = True)
 		print_message(source, '正在投送原理图...')
 		target_path_list = config['servers']
 		source_path = os.path.join(config['current_path'], schematic)
@@ -222,13 +266,11 @@ def send_schematic(source: CommandSource, sub_server: str, schematic):
 			call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
 			print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
 			logger.warning(src_name + f' failed sending schematic {schematic} from {sub_server}. Does the specified sub-server exist?')
+		action_progressing.release()
 
 @new_thread(PLUGIN_ID)
-def excute_copy(source: CommandSource, source_path: os.path, destination: os.path, opration: str, target_server = 'current'):
-	if opration == 'fetch':
-		part_1 = '获取'
-	else:
-		part_1 = '投送'
+def excute_copy(source: CommandSource, source_path: str, destination: str, operation: str, target_server = 'current'):
+	operation_dict = {'fetch': '获取', 'send': '投送', 'push': '投送'}
 	dest_transfered = anti_overwrite(source, destination)
 	if not dest_transfered == destination:
 		print_message(source, f'同名原理图已存在，目标原理图另存为§b{os.path.split(dest_transfered)[1]}§r', True, '')
@@ -236,22 +278,15 @@ def excute_copy(source: CommandSource, source_path: os.path, destination: os.pat
 	try:
 		logger.info(source_path + ' ' + dest_transfered)
 		shutil.copyfile(source_path, dest_transfered)
-		#shutil.copyfile(dest_transfered, source_path)
 	except Exception as e:
-		print_message(source, f'{part_1}原理图§c失败§r, 原因：§4{e}§r', tell = True, prefix = '')
-
+		print_message(source, f'{operation_dict[operation]}原理图§c失败§r, 原因：§4{e}§r', tell = True, prefix = '')
 	else:
 		schematic_name = str(os.path.split(dest_transfered)[1])
-		part_3 = ''
-		if opration == 'fetch':
-			part_3 = command_run(f', §a点此§r', f'点此加载{schematic_name}', f'//schem load {schematic_name}') + '加载此原理图'
-		elif opration == 'send':
-			part_3 = command_run(f', §a点此§r', f'点此跳转到{target_server}', f'/server {target_server}') + '跳转到目标子服'
-		print_message(source, f'{part_1}原理图§a成功§r' + part_3, tell = True, prefix = '')
-		if opration == 'push':
-			git_add_commit(source, schematic_name)
-			
-		
+		result_list = {'fetch': command_run(f', §a点此§r', f'点此加载{schematic_name}', f'//schem load {schematic_name}') + '加载此原理图', 
+						'send': command_run(f', §a点此§r', f'点此跳转到{target_server}', f'/server {target_server}') + '跳转到目标子服', 'push': ''}
+		print_message(source, f'{operation_dict[operation]}原理图§a成功§r' + result_list[operation], tell = True, prefix = '')
+		if operation == 'push' and enableGit:
+			git_add_commit(source, schematic_name)		
 
 @new_thread(PLUGIN_ID)
 def git_add_commit(source: CommandSource, schematic: str):
@@ -268,6 +303,10 @@ def git_add_commit(source: CommandSource, schematic: str):
 
 @new_thread(PLUGIN_ID)
 def git_push(source: CommandSource):
+	if not enableGit:
+		print_message(source, 'git推送功能未启用, 请联系管理员启用')
+		return
+	action_progressing.acquire(blocking = True)
 	src_name = src_to_name(source)
 	try:
 		repo.push()
@@ -283,14 +322,19 @@ def git_push(source: CommandSource):
 		result = '§c失败§r, git意外退出, 原因: ' + str(e)
 		logger.info('{} failed pushing changes to remote reposities, reason: {}'.format(src_name, e))
 	print_message(source, '向公用仓库推送改动' + result)
+	action_progressing.release()
 	
 
 @new_thread(PLUGIN_ID)
 def git_pull(source: CommandSource):
+	if not enableGit:
+		print_message(source, 'git拉取功能未启用, 请联系管理员启用')
+		return
+	action_progressing.acquire(blocking = True)
 	src_name = src_to_name(source)
 	try:
 		repo.pull()
-		result = '§a成功§r' + command_run('点此', '查看本地仓库', '!!wes list git') + '查看本地仓库'
+		result = '§a成功§r, ' + command_run('点此', '查看本地仓库', '!!wes list git').set_color(RColor.gray) + '查看本地仓库'
 		logger.info('{} pulled changes from remote reposities successfully.'.format(src_name))
 	except TimeoutError:
 		result = '§c失败§r, 操作执行§c超时§r, 请告知管理员检查网络'
@@ -302,49 +346,51 @@ def git_pull(source: CommandSource):
 		result = '§c失败§r, git意外退出, 原因: ' + str(e)
 		logger.info('{} failed pulling changes from remote reposities, reason: {}'.format(src_name, e))
 	print_message(source, '自公用仓库拉取改动' + result)
+	action_progressing.release()
 
 @new_thread(PLUGIN_ID)
-def list_schematic(source: CommandSource, sub_server: str):
+def list_schematic(source: CommandSource, sub_server: str, fetch = False):
 	if sub_server == config['current_subserver']:
-		list_schematic_current(source, config)
+		list_schematic_current(source)
 	else: 
 		target_path_list = config['servers']
 		try:
 			target_path = os.path.join(target_path_list[sub_server])
-			print_message(source, f'子服§l{sub_server}§r中的原理图如下：')
 			number = 0
+			if fetch:
+				content = f'您未选定要从子服§l{sub_server}§r获取的原理图, 请选择: '
+			else:
+				content = f'子服§l{sub_server}§r中的原理图如下: '
 			for file in os.listdir(target_path):
-				number = number + 1
-				rfile = command_run(f'§b{file}§r', f'点击获取原理图§l{file}§r', f'{Prefix} fetch {sub_server} {file}')
-				print_message(source, rfile, tell = True, prefix = f' [{number}] ')
+				if file.endswith('.schem') or file.endswith('.schematic'):
+					number = number + 1
+					rfile = f'\n[{number}] ' + command_run(f'§b{file}§r', f'点击获取原理图§l{file}§r', f'{Prefix} fetch {sub_server} {file}')
+					content += rfile
+			print_message(source, content)
 		except:
 			call_help = command_run(f'§a点此§r', '点此查看有效子服列表', f'{Prefix} list')
 			print_message(source, '§c没有找到子服! ' + call_help + '查看有效子服列表')
 
 @new_thread(PLUGIN_ID)
-def list_schematic_current(source: CommandSource, config, target_server = None):
+def list_schematic_current(source: CommandSource, target_server = None):
 	try:
 		source_path = os.path.join(config['current_path'])
 		if target_server == None:
-			print_message(source, '当前服务器可投送的原理图如下: ')
+			content = '当前服务器可投送的原理图如下: '
 		else:
-			print_message(source, f'您将投送原理图至子服§6{target_server}§r')
-			print_message(source, '当前服务器可投送到目标子服的原理图如下: ', True, '')
-			
+			content = f'您将投送原理图至子服§6{target_server}§r\n当前服务器可投送到目标子服的原理图如下: '			
 		number = 0
-		if target_server == None:
-			for file in os.listdir(source_path):
+		for file in os.listdir(source_path):
+			if file.endswith('.schem') or file.endswith('.schematic'):
 				number = number + 1
-				rfile = command_run(f'§b{file}§r', f'点击将原理图§l{file}§r投送到其他子服', f'{Prefix} send to_be_determined {file}')
-				print_message(source, rfile, True, f'[{number}]')
-		else:
-			for file in os.listdir(source_path):
-				number = number + 1
-				rfile = command_run(f'§b{file}§r', f'点击将原理图§l{file}§r投送到§l{target_server}§r', f'{Prefix} send {target_server} {file}')
-				print_message(source, rfile, True, f'[{number}]')
+				if target_server == None:
+					rfile = f'\n[{number}] ' + command_run(f'§b{file}§r', f'点击将原理图§l{file}§r投送到其他子服', f'{Prefix} send to_be_determined {file}')
+				else:
+					rfile = f'\n[{number}] ' + command_run(f'§b{file}§r', f'点击将原理图§l{file}§r投送到§l{target_server}§r', f'{Prefix} send {target_server} {file}')
+				content += rfile
+		print_message(source, content)
 	except Exception as e:
-		print_message(source, f'§c出现错误:{e}§r如有疑问请联系服务器管理员。')
-	
+		print_message(source, f'§c出现错误:{e}§r如有疑问请联系服务器管理员。')	
 
 @new_thread(PLUGIN_ID)
 def list_sub_server_to_send(source: CommandSource, schematic: str):
@@ -366,90 +412,101 @@ def list_sub_server(source: CommandSource):
 		prefix = command_run('§a[F]§r ', '点击显示该服务器可获取的原理图列表', f'{Prefix} list {servers}') + command_run('§6[S]§r ', '点击显示可投送到该服务器的原理图列表', f'{Prefix} list current {servers}')
 		print_message(source, servers, True, prefix)
 
+@new_thread(PLUGIN_ID)
 def reload(source: CommandSource):
+	action_progressing.acquire(blocking = True)
 	try:
-		get_config()
-		print_message(source, '配置文件重载§a成功§r')
+		print_message(source, '重载插件§a完成§r')
+		source.get_server().reload_plugin(PLUGIN_ID)
 	except Exception as e:
-		print_message(source, '配置文件重载§a失败§r, 原因:{}'.format(e))
+		print_message(source, '重载§a失败§r, 原因:{}'.format(e))
+	action_progressing.release()
 
 @new_thread(PLUGIN_ID)
 def request_clear(source: CommandSource):
+	if not enableGit:
+		print_message(source, 'Git仓库管理功能未启用，请联系管理员启用')
 	global clear_flag
 	clear_flag = True
 	print_message(source, '已要求清空本地仓库, ' + 
-	'输入' + command_run('!!wes confirm', '点此确认清理', '!!wes confirm').set_color(RColor.gray) + '以§a确认§r清空' + 
-	'输入' + command_run('!!wes abort', '点此取消清理', '!!wes abort') + '以§c取消§r清空')
-	
+	'输入' + command_run('!!wes confirm', '点此确认清理', '!!wes confirm').set_color(RColor.gray) + '以§a确认§r清空, ' + 
+	'输入' + command_run('!!wes abort', '点此取消清理', '!!wes abort').set_color(RColor.gray) + '以§c取消§r清空')
 
 @new_thread(PLUGIN_ID)
 def clear_local_repo(source: CommandSource, abort = False):
 	global clear_flag
-	if abort and clear_flag:
+	if abort and clear_flag and enableGit:
 		print_message(source, '已§c取消§r清理')
-	elif clear_flag and not abort:
+	elif clear_flag and not abort and enableGit:
+		action_progressing.acquire(blocking = True)
 		clear_flag = False
 		for file in os.listdir(config['servers']['git']):
 			file_path = os.path.join(config['servers']['git'], file)
 			if os.path.isfile(file_path) and not file.endswith('.md'):
+				os.remove(file_path)
 				repo.remove(file_path)
 		src_name = src_to_name(source)
 		repo.commit(f'{src_name} cleared local reposity.')
-		print_message(source, '已§A完成§r清理')
+		print_message(source, '已§a完成§r清理')
+		action_progressing.release()
 	else:
 		print_message(source, '没要求清理啊rue')
-
-
 		
 def on_load(server: ServerInterface, prev_module):
-	get_config()
-	global repo
-	repo = Repo(config['servers']['git'])
+	global repo, enableGit, logger
+	config.load(server)
+	logger = config.logger
+	try:
+		repo = Repo(config['servers']['git'])
+	except KeyError:
+		enableGit = False
 	rprefix = command_run(f'§7{Prefix}§f', '点我获取帮助', Prefix)
 
-	def print_error_msg(source: CommandSource):
-		print_message(source, '§c指令错误! §r请输入§7' + rprefix + '§r以获取插件帮助')
+	def print_error_msg(source: CommandSource, error_type = 'cmd'):
+		error_msg = {'arg': '未知参数!', 'cmd': '指令错误!'}
+		print_message(source, f'§c{error_msg[error_type]} §r请输入§7' + rprefix + '§r以获取插件帮助')
 
 	def permed_literal(literal: str):
 		lvl = config['permission'].get(literal, 0)
 		return Literal(literal).requires(lambda src: src.has_permission(lvl), failure_message_getter = lambda: f'§f[WESchem] §c权限不足, 你想桃子呢, 需要{lvl}§r')
-
 	server.register_command(
-		Literal({Prefix, Prefix_short}).
+		Literal({Prefix, Prefix_short}).on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).
 		runs(lambda src: show_help(src)).
-		on_error(UnknownArgument, lambda src: print_error_msg(src), handled = True).
 		then(
-			permed_literal('fetch').then(QuotableText('sub_server').then(GreedyText('schematic').
-				runs(lambda src, ctx: fetch_schematic(src, ctx['sub_server'], ctx['schematic']))
+			permed_literal('fetch').on_error(UnknownCommand, lambda src: print_error_msg(src), handled = True).
+			then(QuotableText('sub_server').runs(lambda src, ctx: list_schematic(src, ctx['sub_server'], True)).
+			then(GreedyText('schematic').runs(lambda src, ctx: fetch_schematic(src, ctx['sub_server'], ctx['schematic']))
 			))).
-		then(permed_literal('send').then(QuotableText('sub_server').then(GreedyText('schematic').
+		then(permed_literal('send').on_error(UnknownCommand, lambda src: print_error_msg(src), handled = True).
+			then(QuotableText('sub_server').runs(lambda src, ctx: list_schematic_current(src, ctx['sub_server'])).
+			then(GreedyText('schematic').
 				runs(lambda src, ctx: send_schematic(src, ctx['sub_server'], ctx['schematic']))
 			))).
 		then(
 			permed_literal('list').
 				runs(lambda src: list_sub_server(src)).
 					then(Literal('current').runs(lambda src: list_schematic_current(src, config)).
-						then(QuotableText('target_server').runs(lambda src, ctx: list_schematic_current(src, config, ctx['target_server']))).
+						then(QuotableText('target_server').runs(lambda src, ctx: list_schematic_current(src, config, ctx['target_server'])))).
 					then(GreedyText('sub_server').
 						runs(lambda src, ctx: list_schematic(src, ctx['sub_server']))
-			))).
+			)).
 		then(
-			permed_literal('push').runs(lambda src: git_push(src))
+			permed_literal('push').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: git_push(src))
 		).
 		then(
-			permed_literal('pull').runs(lambda src: git_pull(src))
+			permed_literal('pull').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: git_pull(src))
 		).
 		then(
-			permed_literal('clear').runs(lambda src: request_clear(src))
+			permed_literal('clear').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: request_clear(src))
 		).
 		then(
-			permed_literal('confirm').runs(lambda src: clear_local_repo(src))
+			permed_literal('confirm').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: clear_local_repo(src))
 		).
 		then(
-			permed_literal('abort').runs(lambda src: clear_local_repo(src, True))
+			permed_literal('abort').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: clear_local_repo(src, True))
 		).
 		then(
-			permed_literal('reload').runs(lambda src: reload(src))
+			permed_literal('reload').on_error(UnknownArgument, lambda src: print_error_msg(src, 'arg'), handled = True).runs(lambda src: reload(src))
 		)
 	)
 	server.register_help_message(Prefix, '从指定子服处获取WorldEdit原理图至本服')
