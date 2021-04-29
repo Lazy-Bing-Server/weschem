@@ -2,7 +2,7 @@ PLUGIN_ID = 'weschem'
 PLUGIN_NAME_SHORT = '§lWES§rchem Manager'
 PLUGIN_METADATA = {
 	'id': PLUGIN_ID,
-	'version': '1.2.0-beta3',
+	'version': '1.2.0-beta4',
 	'name': '§lW§rorld§lE§rdit §lS§rchematic §lM§ranager',
 	'description': 'Manage WE schematic files in a group of servers',
 	'author': [
@@ -328,33 +328,32 @@ def git_add_commit(source: CommandSource, schematic: str):
 def git_push(source: CommandSource, add_args = None):
 	if not enableGit:
 		print_message(source, 'git推送功能未启用, 请联系管理员启用')
+		return	
+	if not add_args in [None, '-f', '-h']:
+		print_message(source, f'向公用仓库推送改动§c失败§r, 参数§4{add_args}§r无效, §7' + command_run('点此', '获取参数帮助', '!!wes push -h') + '§r以获取本指令参数帮助')
+		return
+	if add_args == '-h':
+		show_help(source, True)
 		return
 	action_progressing.acquire(blocking = True)
 	src_name = src_to_name(source)
 	try:
 		if add_args == None:
 			repo.push()
-		elif add_args == '-f':
-			repo.push('--force')
-		elif add_args == '-h':
-			show_help(source, True)
-			action_progressing.release()
-			return
 		else:
-			raise RuntimeError
-		result = '§a成功§r, ' + RText('点此').set_click_event(RAction.open_url, config['remote_reposity']).set_color(RColor.gray) + '查看远程仓库'
-		logger.info('{} pushed changes to remote reposities successfully.'.format(src_name))
+			repo.push('--force')
 	except TimeoutError:
 		result = '§c失败§r, 操作执行§c超时§r, 请告知管理员检查网络'
 		logger.info(f'{src_name} failed pushing changes to remote reposities, time out.')
 	except CalledProcessError:
 		result = '§c失败§r, git无法执行这种合并, ' + command_run('点此', '拉取未合并的改动', '!!wes pull').set_color(RColor.gray) + '拉取这些改动后方可再行推送, 若无效' + command_run('点此', '获取参数帮助', '!!wes push -h').set_color(RColor.gray) + '查看额外参数以执行其他形式合并'
 		logger.info(f'{src_name} failed pushing changes to remote reposities, the remote contains work that you do not have locally or invaild connection to your remote repo.')
-	except RuntimeError:
-		result = f'§c失败§r, 参数§4{add_args}§r无效, §7' + command_run('点此', '获取参数帮助', '!!wes push -h') + '§r以获取本指令参数帮助'
 	except Exception as e:
 		result = '§c失败§r, 发生意外错误, 原因: §c' + str(e)
 		logger.info('{} failed pushing changes to remote reposities, reason: {}'.format(src_name, e))
+	else:
+		result = '§a成功§r, ' + RText('点此').set_click_event(RAction.open_url, config['remote_reposity']).set_color(RColor.gray) + '查看远程仓库'
+		logger.info('{} pushed changes to remote reposities successfully.'.format(src_name))
 	print_message(source, '向公用仓库推送改动' + result)
 	action_progressing.release()
 	
@@ -362,7 +361,13 @@ def git_push(source: CommandSource, add_args = None):
 @new_thread(PLUGIN_ID)
 def git_pull(source: CommandSource, add_args = None):
 	if not enableGit:
-		print_message(source, 'git拉取功能未启用, 请联系管理员启用')
+		print_message(source, 'git推送功能未启用, 请联系管理员启用')
+		return	
+	if not add_args in [None, '-f', '-h', '-r']:
+		print_message(source, f'向公用仓库推送改动§c失败§r, 参数§4{add_args}§r无效, §7' + command_run('点此', '获取参数帮助', '!!wes push -h') + '§r以获取本指令参数帮助')
+		return
+	if add_args == '-h':
+		show_help(source, True)
 		return
 	action_progressing.acquire(blocking = True)
 	src_name = src_to_name(source)
@@ -371,27 +376,20 @@ def git_pull(source: CommandSource, add_args = None):
 			repo.pull()
 		elif add_args == '-f':
 			repo.pull('--force')
-		elif add_args == '-r':
-			repo.pull('--rebase')
-		elif add_args == '-h':
-			show_help(source, True)
-			action_progressing.release()
-			return
 		else:
-			raise RuntimeError
-		result = '§a成功§r, ' + command_run('点此', '查看本地仓库', '!!wes list git').set_color(RColor.gray) + '查看本地仓库'
-		logger.info('{} pulled changes from remote reposities successfully.'.format(src_name))
+			repo.pull('--rebase')
 	except TimeoutError:
 		result = '§c失败§r, 操作执行§c超时§r, 请告知管理员检查网络'
 		logger.info(f'{src_name} failed pushing changes to remote reposities, time out.')
 	except CalledProcessError:
 		result = '§c失败§r, git无法执行这种合并, ' + command_run('点此', '获取参数帮助', '!!wes pull -h').set_color(RColor.gray) + '查看额外参数以执行其他形式合并'
 		logger.info(f'{src_name} failed pushing changes to remote reposities, invaild connection to your remote repo.')
-	except RuntimeError:
-		result = f'§c失败§r, 参数§4{add_args}§r无效, §7' + command_run('点此', '获取参数帮助', '!!wes pull -h') + '§r以获取本指令参数帮助'
 	except Exception as e:
 		result = '§c失败§r, 发生意外错误, 原因: §c' + str(e)
 		logger.info('{} failed pulling changes from remote reposities, reason: {}'.format(src_name, e))
+	else:
+		result = '§a成功§r, ' + command_run('点此', '查看本地仓库', '!!wes list git').set_color(RColor.gray) + '查看本地仓库'
+		logger.info('{} pulled changes from remote reposities successfully.'.format(src_name))
 	print_message(source, '自公用仓库拉取改动' + result)
 	action_progressing.release()
 
@@ -461,7 +459,9 @@ def list_sub_server(source: CommandSource):
 
 @new_thread(PLUGIN_ID)
 def reload(source: CommandSource):
-	action_progressing.acquire(blocking = True)
+	acq = action_progressing.acquire(blocking = False)
+	if acq:
+		print_message('重载§a失败§r, 有正在执行的操作')
 	try:
 		print_message(source, '重载插件§a完成§r')
 		source.get_server().reload_plugin(PLUGIN_ID)

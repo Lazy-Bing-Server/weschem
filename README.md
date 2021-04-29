@@ -54,6 +54,8 @@ List all the schematics in the sub-server you input.
    Clear your local share reposity. Folders and markdown files will be kept.
 ## Preview Versions Changelogs
 
+**1.2.0-beta4** Minor bugs fixed.
+
 **1.2.0-beta3** More bug fixed and now you can add args for some git commands(to keep it able to transfer file).
 
 **1.2.0-beta2** Some bugs fixed.
